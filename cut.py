@@ -1,5 +1,7 @@
 import cv2
+import glob
 import numpy as np
+import os
 
 def show_result(winname, img, wait_time=10):
     scale = 0.1
@@ -7,12 +9,12 @@ def show_result(winname, img, wait_time=10):
     cv2.imshow(winname, disp_img)
     cv2.waitKey(wait_time)
 
-def cropTiles(img,
-              values = [4, 3, 2, 1],
-              colors = ["red", "blue", "black", "orange"]):
+cnt = 0
+def cropTiles(img, dir2save):
+    global cnt
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # define range of green color in HSV
-    lower_green = np.array([60, 30, 15])
+    lower_green = np.array([60, 100, 20])
     upper_green = np.array([90, 255, 255])
     # Threshold the HSV image to extract green color
     mask = cv2.inRange(hsv, lower_green, upper_green)
@@ -32,15 +34,26 @@ def cropTiles(img,
         one_mask = np.array(labels_map==l, dtype=np.uint8)
         # Find minimum spanning bounding box
         x, y, w, h = cv2.boundingRect(one_mask)
+        # filter trash
+        if max(w, h) > 8 * min(w, h):
+            continue
         one_tile = img[y:y+h, x:x+w]
         
-        val = values[(len(values)+1)*y//img.shape[0]]
-        col = colors[(len(colors)+1)*x//img.shape[1]]
-        path2save = f'images/tiles/{val}_{col}.png'
-        cv2.imwrite(path2save, one_tile)
-        
-        print(path2save, "saved!")
+        cnt += 1
+        cv2.imwrite(os.path.join(dir2save, f"{cnt:05d}.png"), one_tile)
+        # cv2.imshow(dir2save, one_tile)
+        # cv2.waitKey(20)
+        print(f"{cnt:05d} images saved to {dir2save}!", end='\r')
 
-cropTiles(cv2.imread("images/raw/1.jpg"), [4, 3, 2, 1])
-cropTiles(cv2.imread("images/raw/2.jpg"), [8, 7, 6, 5])
-cropTiles(cv2.imread("images/raw/3.jpg"), [13, 12, 11, 10, 9])
+for path in glob.glob("images/raw/mp4/*.mp4"):
+    print(f"\n{path} started")
+    cnt = 0
+    filename = path.split('/')[-1][:-4]
+    os.makedirs(f"images/tiles/{filename}", exist_ok=True)
+    
+    cap = cv2.VideoCapture(path)
+    success, image = cap.read()
+    while success:
+        cropTiles(image, f"images/tiles/{filename}")
+        success, image = cap.read()
+    print(f"\n{path} finished")
