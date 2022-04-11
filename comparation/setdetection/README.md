@@ -1,0 +1,1 @@
+[setdetection](https://github.com/stetelepta/setdetection) project test for rummikub

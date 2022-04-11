@@ -1,7 +1,8 @@
 import cv2
+from generate import classes_names
 import glob
 import numpy as np
-from generate import classes_names
+import sys
 
 def plot(img, label):
     H, W, _ = img.shape
@@ -24,7 +25,7 @@ def plot(img, label):
     cv2.waitKey(0)
 
 if __name__ == "__main__":
-    folder = "images/generated/v4/test"
+    folder = sys.argv[1]#"images/generated/v6"
 
     images = sorted(glob.glob(f"{folder}/images/*.jpg"))
     labels = sorted(glob.glob(f"{folder}/labels/*.txt"))
@@ -34,5 +35,7 @@ if __name__ == "__main__":
         print(label)
         img = cv2.imread(img)
         label = np.loadtxt(label, delimiter=' ')
-
+        if len(label.shape) == 1:
+            label = label.reshape(1, -1)
+        print(label)
         plot(img, label)

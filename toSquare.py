@@ -10,7 +10,7 @@ def toSquare(img, size=640):
     return img
 
 if __name__ == "__main__":
-    for img_path in tqdm.tqdm(glob.glob("images/test/raw/*.jpg")):
+    for img_path in tqdm.tqdm(glob.glob("images/test/raw/*.jpeg")):
         img = cv2.imread(img_path)
         img = toSquare(img, 640)
-        cv2.imwrite(f"images/test/processed/{img_path.split('/')[-1]}", img)
+        cv2.imwrite(f"images/test/processed/{img_path.split('/')[-1][:-3]}.jpg", img)
