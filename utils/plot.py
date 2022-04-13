@@ -1,25 +1,21 @@
 import cv2
-from generate import classes_names
 import glob
 import numpy as np
 import sys
 
-def plot(img, label):
-    H, W, _ = img.shape
-    for idx, x, y, w, h in label:
-        x *= W
-        w *= W
-        y *= H
-        h *= H
-
-        x1 = int(x - w // 2)
-        y1 = int(y - h // 2)
-        x2 = int(x + w // 2)
-        y2 = int(y + h // 2)
-
-        img = cv2.rectangle(img, (x1, y1), (x2, y2), (255,0,0), 1)
-        img = cv2.putText(img, classes_names[int(idx)] if idx <= 13 else "   " + classes_names[int(idx)], (x1, y1-10),
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0), 2)
+def plot(img, label, id2label):
+    img = img.copy() 
+    for idx, x1, y1, w, h in label:
+        x2 = x1 + w
+        y2 = y1 + h
+        color = np.random.randint(0, 255, (3,)) / 255.
+        color = (float(color[0]), float(color[1]), float(color[2]))
+        # print(img, (x1, y1), (x2, y2))
+        img = cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
+        img = cv2.putText(
+            img, id2label[int(idx)], (x1, y1+10), cv2.FONT_HERSHEY_SIMPLEX,
+            fontScale=0.5, color=color, thickness=2
+        )
 
     cv2.imshow('img', img)
     cv2.waitKey(0)

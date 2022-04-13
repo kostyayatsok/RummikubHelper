@@ -1,9 +1,9 @@
 import cv2
 import glob
-from generate import name2class
+from utils.generate import name2class
 import numpy as np
 import os
-from toSquare import toSquare
+from utils.toSquare import toSquare
 import yaml
 import warnings
 warnings.filterwarnings('ignore')

@@ -2,7 +2,7 @@ import cv2
 import glob
 import numpy as np
 import os
-from toSquare import toSquare
+from utils.toSquare import toSquare
 def show_result(winname, img, wait_time=10):
     scale = 0.1
     disp_img = cv2.resize(img, None, fx=scale, fy=scale)
