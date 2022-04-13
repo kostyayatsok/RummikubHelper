@@ -102,7 +102,8 @@ class SyntheticDataset(Dataset):
                 if len(annotation) > 0:
                     break
                 else:
-                    resize_fn = T.Resize(4*tile_size//5)        
+                    resize_fn = T.Resize(4*tile_size//5)
+                    continue      
             
             background[:, y0:y1, x0:x1][:, mask] = tile[:, mask]            
             annotation.append({
