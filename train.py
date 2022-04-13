@@ -8,11 +8,11 @@ from models import FasterRCNN
 torch.manual_seed(42)
 
 train_data_config = SyntheticConfig()
-train_data_config.dataset_size = 100
+train_data_config.dataset_size = 10000
 dataset = FasterRCNNSynthecticDataset(train_data_config)
 
 test_data_config = SyntheticConfig()
-test_data_config.dataset_size = 10
+test_data_config.dataset_size = 500
 dataset_test = FasterRCNNSynthecticDataset(test_data_config)
 
 data_loader = torch.utils.data.DataLoader(
@@ -39,6 +39,10 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
 
 num_epochs = 10
 for epoch in range(num_epochs):
-    train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
+    train_one_epoch(
+        model, optimizer, data_loader,
+        device, epoch, print_freq=5000
+    )
     lr_scheduler.step()
     evaluate(model, data_loader_test, device=device)
+    torch.save(model.state_dict(), "model.pt")

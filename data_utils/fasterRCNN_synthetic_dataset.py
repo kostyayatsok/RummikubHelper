@@ -13,6 +13,7 @@ class FasterRCNNSynthecticDataset(SyntheticDataset):
     def __getitem__(self, idx: int):
         image, labels = super().__getitem__(idx)
         img_sz = image.size(-1)
+
         labels = {
             "boxes": torch.tensor([
                 [
@@ -24,7 +25,17 @@ class FasterRCNNSynthecticDataset(SyntheticDataset):
             ]),
             "labels": torch.tensor([
                 label["label"] for label in labels
-            ])
+            ]),
+            "image_id": torch.tensor([
+                idx
+            ]),
+            "area": torch.tensor([
+                label["w"]*img_sz * label["h"]*img_sz \
+                                        for label in labels
+            ]),
+            "iscrowd": torch.tensor(
+                [False] * len(labels)
+            ),
         }
         return image, labels
 
@@ -32,7 +43,7 @@ class FasterRCNNSynthecticDataset(SyntheticDataset):
 if __name__ == "__main__":
     dataset = FasterRCNNSynthecticDataset()
     id2label = {v:k for k, v in dataset.to_id.items()}
-    for image, label in dataset:
-        label = np.array([[id_, box[0], box[1], box[2], box[3]] \
-                    for id_, box in zip(label["labels"], label["boxes"])], dtype=int)
-        plot(image.numpy().transpose((1, 2, 0)), label, id2label)
+    for image, label in dataset: pass
+        # label = np.array([[id_, box[0], box[1], box[2], box[3]] \
+        #             for id_, box in zip(label["labels"], label["boxes"])], dtype=int)
+        # plot(image.numpy().transpose((1, 2, 0)), label, id2label)

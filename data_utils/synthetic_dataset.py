@@ -61,7 +61,7 @@ class SyntheticDataset(Dataset):
         background_idx = torch.randint(0, self.n_backgrounds, (1,))[0]
         background = read_image(self.backgrounds[background_idx]) / 255.
         if background.size(0) == 1:
-            self.__getitem__(idx)
+            background = torch.cat([background, background, background], dim=0)
         # crop it to square
         background_size = min(background.size(1), background.size(2))
         background = background[:, :background_size, :background_size]
@@ -99,7 +99,10 @@ class SyntheticDataset(Dataset):
                 x1 = x0+tile_w
 
             if y1 >= background_size:
-                break
+                if len(annotation) > 0:
+                    break
+                else:
+                    resize_fn = T.Resize(4*tile_size//5)        
             
             background[:, y0:y1, x0:x1][:, mask] = tile[:, mask]            
             annotation.append({
@@ -112,7 +115,6 @@ class SyntheticDataset(Dataset):
             x0 = x1
     
         final_image = self.config.total_transforms(background)
-        # final_image = background
         
         return final_image, annotation
 
