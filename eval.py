@@ -23,5 +23,5 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 model = LightFasterRCNN()
 model.to(device)
 
-wandb.init(project="Rummy", name="debug")
+wandb.init(project="Rummy", name="evaluation")
 evaluate(model, data_loader_test, device, 0)

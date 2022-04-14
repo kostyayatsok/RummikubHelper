@@ -9,15 +9,16 @@ import wandb
 
 torch.manual_seed(42)
 
+batch_size=16
+
 train_data_config = SyntheticConfig()
-train_data_config.dataset_size = 1000
+train_data_config.dataset_size = 512
 dataset = FasterRCNNSynthecticDataset(train_data_config)
 
 test_data_config = SyntheticConfig()
-test_data_config.dataset_size = 100
+test_data_config.dataset_size = 64
 dataset_test = FasterRCNNSynthecticDataset(test_data_config)
 
-batch_size=16
 data_loader = torch.utils.data.DataLoader(
     dataset, batch_size=batch_size, num_workers=2,
     collate_fn=utils.collate_fn
@@ -33,16 +34,16 @@ model = FasterRCNN()
 model.to(device)
 
 params = [p for p in model.parameters() if p.requires_grad]
-optimizer = torch.optim.SGD(params, lr=0.005,
-                            momentum=0.9, weight_decay=0.0005)
+optimizer = torch.optim.SGD(params, lr=0.02,
+                            momentum=0.9, weight_decay=0.0001)
 
 lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
-                                               step_size=10,
+                                               step_size=160,
                                                gamma=0.1)
 
 wandb.init(project="Rummy", name="FasterRCNN-values")
 
-num_epochs = 100
+num_epochs = 1000
 for epoch in range(num_epochs):
     metrics = train_one_epoch(
         model, optimizer, data_loader,

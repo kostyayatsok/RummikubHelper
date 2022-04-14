@@ -75,7 +75,7 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
         #print("run model...")
         out = model(images, targets)
         
-        predictions.extend(out)
+        predictions.extend([{k:v.cpu() for k, v in o.items()} for o in out])
         ground_truth.extend(targets)
 
     #print("Calculate +/-...")
@@ -125,13 +125,13 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
 
         log_dict.update({
             f"examples/example-{i:02d}" : wandb.Image(
-                image.numpy().transpose([1, 2, 0]),
+                image.cpu().numpy().transpose([1, 2, 0]),
                 boxes = {
                     "predictions": {
                         "box_data": wandbBBoxes(
-                            pred["boxes"].numpy(),
-                            pred["scores"].numpy(),
-                            pred["labels"].numpy()
+                            pred["boxes"].cpu().numpy(),
+                            pred["scores"].cpu().numpy(),
+                            pred["labels"].cpu().numpy()
                         ),
                         "class_labels": loader.dataset.to_name
                     },
