@@ -1,1 +1,1 @@
-from models.FasterRCNN import FasterRCNN
+from models.FasterRCNN import FasterRCNN, LightFasterRCNN

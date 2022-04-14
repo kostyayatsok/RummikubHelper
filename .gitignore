@@ -135,3 +135,5 @@ predictions/
 tmp.py
 .vscode
 images.zip
+wandb
+model.pt

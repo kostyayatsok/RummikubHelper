@@ -41,6 +41,8 @@ class FasterRCNNSynthecticDataset(SyntheticDataset):
 
 
 if __name__ == "__main__":
+    torch.manual_seed(42)
+
     dataset = FasterRCNNSynthecticDataset()
     id2label = {v:k for k, v in dataset.to_id.items()}
     for image, label in dataset: pass

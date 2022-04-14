@@ -52,6 +52,7 @@ class SyntheticDataset(Dataset):
         to_id["orange"] = 4+14   
         self.to_id = to_id
 
+        self.to_name = {v:k for k,v in to_id.items()}
 
     def __len__(self):
         return self.config.dataset_size
@@ -90,22 +91,18 @@ class SyntheticDataset(Dataset):
             mask = (tile.sum(dim=0) > 0.)
 
             _, tile_h, tile_w = tile.shape
-            y1 = y0+tile_h
-            x1 = x0+tile_w
-            if x1 >= background_size:
+            if x0+tile_w >= background_size:
                 x0 = 0
-                y0 += tile_size
-                y1 = y0+tile_h
-                x1 = x0+tile_w
-
-            if y1 >= background_size:
-                if len(annotation) > 0:
-                    break
+                if len(annotation):
+                    y0 += tile_size
                 else:
-                    resize_fn = T.Resize(4*tile_size//5)
-                    continue      
-            
-            background[:, y0:y1, x0:x1][:, mask] = tile[:, mask]            
+                    y0 = min(y0+tile_size, background_size-tile_size)
+            if y0 >= background_size:
+                break
+            x1 = min(x0+tile_w, background_size)
+            y1 = min(y0+tile_h, background_size)
+            mask = mask[:y1-y0, :x1-x0]
+            background[:, y0:y1, x0:x1][:, mask] = tile[:, :y1-y0, :x1-x0][:, mask]
             annotation.append({
                 "label": self.to_id[value],
                 "x0": x0 / background_size,
