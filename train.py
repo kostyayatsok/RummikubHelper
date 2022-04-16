@@ -40,9 +40,9 @@ optimizer = torch.optim.SGD(params, lr=0.02,
 lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                step_size=160,
                                                gamma=0.1)
-
 wandb.init(project="Rummy", name="FasterRCNN-values")
 
+best_precision = 0
 num_epochs = 1000
 for epoch in range(num_epochs):
     metrics = train_one_epoch(
@@ -56,5 +56,10 @@ for epoch in range(num_epochs):
     wandb.log(wandb_log)
 
     lr_scheduler.step()
-    evaluate(model, data_loader_test, device, epoch)
-    torch.save(model.state_dict(), "model.pt")
+    val_log = evaluate(model, data_loader_test, device, epoch)
+
+    if val_log[f"precision@0.95"] > best_precision:
+        torch.save(model.state_dict(), "model.pt")
+        best_precision = val_log[f"precision@0.95"]
+    if epoch % 10:
+        wandb.save("model.pt", policy="now")

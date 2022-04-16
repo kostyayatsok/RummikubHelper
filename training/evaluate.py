@@ -39,6 +39,7 @@ def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
                 positives["true_label"].append(-1)
                 positives["pred_label"].append(predictions[i]["labels"][pred_idx])
                 positives["image_id"].append(ground_truth[i]["image_id"][0])
+                positives["correct"].append(0)
 
     for key in positives:
         positives[key] = np.array(positives[key])
@@ -51,17 +52,18 @@ def pr_curve(positives, negatives):
     thresholds = np.linspace(0, 1, 11)
     metrics = []
     for score_threshold in thresholds:
-        mask = (positives["score"] > score_threshold).astype(np.int32)
+        mask = positives["score"] > score_threshold
         if mask.sum() > 0:
             precision = np.sum(positives["correct"][mask]) / np.sum(mask)
         else:
             precision = 0
 
-        mask = (negatives > score_threshold).astype(np.int32)
+        mask = negatives > score_threshold
         recall = np.sum(mask) / negatives.shape[0]
         
         metrics.append([precision, recall])
     return metrics
+
 
 @torch.no_grad()
 def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95):
@@ -148,3 +150,4 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
         })
 
     wandb.log(log_dict)
+    return log_dict

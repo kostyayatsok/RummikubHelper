@@ -20,8 +20,9 @@ data_loader_test = torch.utils.data.DataLoader(
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-model = LightFasterRCNN()
+model = FasterRCNN()
+model.load_state_dict(torch.load("checkpoints/FasterRCNN-values-1504.pt"))
 model.to(device)
 
-wandb.init(project="Rummy", name="evaluation")
+wandb.init(project="Rummy", name="FasterRCNN-values-evaluation")
 evaluate(model, data_loader_test, device, 0)

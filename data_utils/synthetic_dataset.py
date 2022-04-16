@@ -110,6 +110,13 @@ class SyntheticDataset(Dataset):
                 "w": tile_w / background_size,
                 "h": tile_h / background_size
             })
+            annotation.append({
+                "label": self.to_id[color],
+                "x0": x0 / background_size,
+                "y0": y0 / background_size,
+                "w": tile_w / background_size,
+                "h": tile_h / background_size
+            })
             x0 = x1
     
         final_image = self.config.total_transforms(background)
