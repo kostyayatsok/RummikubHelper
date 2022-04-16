@@ -9,14 +9,16 @@ import wandb
 
 torch.manual_seed(42)
 
-batch_size=16
+LOCAL = True
+
+batch_size = 16 if not LOCAL else 2
 
 train_data_config = SyntheticConfig()
-train_data_config.dataset_size = 512
+train_data_config.dataset_size = 512 if not LOCAL else 4
 dataset = FasterRCNNSynthecticDataset(train_data_config)
 
 test_data_config = SyntheticConfig()
-test_data_config.dataset_size = 64
+test_data_config.dataset_size = 64 if not LOCAL else 4
 dataset_test = FasterRCNNSynthecticDataset(test_data_config)
 
 data_loader = torch.utils.data.DataLoader(
@@ -40,7 +42,7 @@ optimizer = torch.optim.SGD(params, lr=0.02,
 lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                step_size=160,
                                                gamma=0.1)
-wandb.init(project="Rummy", name="FasterRCNN-values")
+wandb.init(project="Rummy", name="FasterRCNN-values-and-colours")
 
 best_precision = 0
 num_epochs = 1000

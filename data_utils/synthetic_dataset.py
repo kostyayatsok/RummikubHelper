@@ -44,12 +44,10 @@ class SyntheticDataset(Dataset):
         self.n_types = len(self.tiles)
         self.n_backgrounds = len(self.backgrounds)
         
-        to_id = {str(i):i for i in range(1, 14)}
-        to_id["j"] = 14
-        to_id["red"] = 1+14
-        to_id["blue"] = 2+14
-        to_id["black"] = 3+14
-        to_id["orange"] = 4+14   
+        to_id = {}
+        for i, c in enumerate(["red","blue","black","orange"]):
+            for j, v in enumerate([str(i) for i in range(1,14)] + ["j"]):
+                to_id[v+'-'+c] = (j+1)*10 + (i+1)
         self.to_id = to_id
 
         self.to_name = {v:k for k,v in to_id.items()}
@@ -104,14 +102,7 @@ class SyntheticDataset(Dataset):
             mask = mask[:y1-y0, :x1-x0]
             background[:, y0:y1, x0:x1][:, mask] = tile[:, :y1-y0, :x1-x0][:, mask]
             annotation.append({
-                "label": self.to_id[value],
-                "x0": x0 / background_size,
-                "y0": y0 / background_size,
-                "w": tile_w / background_size,
-                "h": tile_h / background_size
-            })
-            annotation.append({
-                "label": self.to_id[color],
+                "label": self.to_id[value+'-'+color],
                 "x0": x0 / background_size,
                 "y0": y0 / background_size,
                 "w": tile_w / background_size,

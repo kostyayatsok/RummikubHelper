@@ -17,11 +17,11 @@ def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
                     predictions[i]["boxes"][pred_idx].unsqueeze(0),
                     ground_truth[i]["boxes"][true_idx].unsqueeze(0)
                 )[0]
+                correct = ground_truth[i]["labels"][true_idx] == \
+                                            predictions[i]["labels"][pred_idx]
                 if iou >= iou_threshold:
                     used = True
-                    correct = ground_truth[i]["labels"][true_idx] == \
-                                            predictions[i]["labels"][pred_idx]
-
+                    
                     positives["iou"].append(iou)
                     positives["score"].append(predictions[i]["scores"][pred_idx])
                     positives["true_label"].append(ground_truth[i]["labels"][true_idx])
@@ -29,9 +29,8 @@ def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
                     positives["correct"].append(int(correct))
                     positives["image_id"].append(ground_truth[i]["image_id"][0])
 
-                    if correct:
-                        negatives[true_idx] = max(negatives[true_idx],
-                                                predictions[i]["scores"][pred_idx])
+                negatives[true_idx] = max(negatives[true_idx],
+                                        predictions[i]["scores"][pred_idx]*correct)
 
             if not used: 
                 positives["iou"].append(0)
@@ -69,7 +68,6 @@ def pr_curve(positives, negatives):
 def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95):
     model.eval()
 
-    #print("Predict...")
     predictions = []
     ground_truth = []
     for images, targets in tqdm(loader, total=len(loader)):
@@ -80,13 +78,10 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
         predictions.extend([{k:v.cpu() for k, v in o.items()} for o in out])
         ground_truth.extend(targets)
 
-    #print("Calculate +/-...")
     positives, negatives = positives_and_negatives(
                                     ground_truth, predictions, iou_threshold)
-    #print("Calculate pr...")
     metrics = pr_curve(positives, negatives)
     
-    #print("Calculate AP...")
     precision_at_target_recall = 0
     average_precision = 0
     prev_p, prev_r = 0, 1
@@ -122,9 +117,8 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
                 "domain" : "pixel",
             })
         return all_bboxes
-    #print("Prepare images...")
-    for i, (image, target, pred) in enumerate(zip(images, targets, out)):  
 
+    for i, (image, target, pred) in enumerate(zip(images, targets, out)):
         log_dict.update({
             f"examples/example-{i:02d}" : wandb.Image(
                 image.cpu().numpy().transpose([1, 2, 0]),
