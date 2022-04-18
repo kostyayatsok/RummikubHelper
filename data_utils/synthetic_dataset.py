@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
+from data_utils.utils import get_label_encoders
 from utils.plot import plot
 from torchvision.io import read_image
 from torch.utils.data import Dataset
@@ -44,13 +45,7 @@ class SyntheticDataset(Dataset):
         self.n_types = len(self.tiles)
         self.n_backgrounds = len(self.backgrounds)
         
-        to_id = {}
-        for i, c in enumerate(["red","blue","black","orange"]):
-            for j, v in enumerate([str(i) for i in range(1,14)] + ["j"]):
-                to_id[v+'-'+c] = (j+1)*10 + (i+1)
-        self.to_id = to_id
-
-        self.to_name = {v:k for k,v in to_id.items()}
+        self.to_id, self.to_name = get_label_encoders()
 
     def __len__(self):
         return self.config.dataset_size

@@ -1,2 +1,3 @@
 from data_utils.fasterRCNN_synthetic_dataset import FasterRCNNSynthecticDataset
-from data_utils.fasterRCNN_synthetic_dataset import SyntheticDataset, SyntheticConfig
+from data_utils.synthetic_dataset import SyntheticDataset, SyntheticConfig
+from data_utils.coco_format_dataset import CocoFormatDataset

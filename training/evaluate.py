@@ -51,13 +51,13 @@ def pr_curve(positives, negatives):
     thresholds = np.linspace(0, 1, 11)
     metrics = []
     for score_threshold in thresholds:
-        mask = positives["score"] > score_threshold
+        mask = positives["score"] >= score_threshold
         if mask.sum() > 0:
             precision = np.sum(positives["correct"][mask]) / np.sum(mask)
         else:
-            precision = 0
+            precision = 1
 
-        mask = negatives > score_threshold
+        mask = negatives >= score_threshold
         recall = np.sum(mask) / negatives.shape[0]
         
         metrics.append([precision, recall])
@@ -70,13 +70,14 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
 
     predictions = []
     ground_truth = []
+    all_images = []
     for images, targets in tqdm(loader, total=len(loader)):
         images = [image.to(device) for image in images]
-        #print("run model...")
         out = model(images, targets)
         
         predictions.extend([{k:v.cpu() for k, v in o.items()} for o in out])
         ground_truth.extend(targets)
+        all_images.extend(images)
 
     positives, negatives = positives_and_negatives(
                                     ground_truth, predictions, iou_threshold)
@@ -84,13 +85,12 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
     
     precision_at_target_recall = 0
     average_precision = 0
-    prev_p, prev_r = 0, 1
+    prev_p = 0
     for p, r in metrics:
-        average_precision += (p - prev_p) * (prev_r - r)
-        prev_p, prev_r = p, r
+        average_precision += (p - prev_p) * r
+        prev_p = p
         if r > target_recall:
             precision_at_target_recall = p
-    average_precision /= len(metrics)
 
     pr_table = wandb.Table(data=metrics, columns = ["precision", "recall"])
     log_dict = {
@@ -118,7 +118,7 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
             })
         return all_bboxes
 
-    for i, (image, target, pred) in enumerate(zip(images, targets, out)):
+    for i, (image, target, pred) in enumerate(zip(all_images, ground_truth, predictions)):
         log_dict.update({
             f"examples/example-{i:02d}" : wandb.Image(
                 image.cpu().numpy().transpose([1, 2, 0]),
