@@ -50,6 +50,9 @@ class SyntheticDataset(Dataset):
     def __len__(self):
         return self.config.dataset_size
     
+    def stack_tiles(tile1, tile2):
+        raise "Not implemented"
+
     def __getitem__(self, idx: int):
         # choose random background
         background_idx = torch.randint(0, self.n_backgrounds, (1,))[0]
@@ -63,7 +66,7 @@ class SyntheticDataset(Dataset):
         tile_size = torch.rand(1) * (self.config.scale[1] - \
                         self.config.scale[0]) + self.config.scale[0]
         tile_size = int(background_size * tile_size)
-        resize_fn = T.Resize(tile_size)
+        resize_fn = T.Resize(tile_size, max_size=tile_size+1)
         x0, y0 = 0, 0
         
         annotation = []

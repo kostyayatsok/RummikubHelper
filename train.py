@@ -1,4 +1,5 @@
 from data_utils import FasterRCNNSynthecticDataset
+from data_utils.coco_format_dataset import CocoFormatDataset
 from training.engine import train_one_epoch
 from training.evaluate import evaluate
 from data_utils import SyntheticConfig
@@ -10,16 +11,36 @@ import wandb
 torch.manual_seed(42)
 
 LOCAL = True
+SYNTHETIC = False
 
 batch_size = 16 if not LOCAL else 2
 
-train_data_config = SyntheticConfig()
-train_data_config.dataset_size = 512 if not LOCAL else 4
-dataset = FasterRCNNSynthecticDataset(train_data_config)
+if SYNTHETIC:
+    num_epochs = 1000
+    lr_step_size = 160
 
-test_data_config = SyntheticConfig()
-test_data_config.dataset_size = 64 if not LOCAL else 4
-dataset_test = FasterRCNNSynthecticDataset(test_data_config)
+    train_data_config = SyntheticConfig()
+    train_data_config.dataset_size = 512 if not LOCAL else 4
+    dataset = FasterRCNNSynthecticDataset(train_data_config)
+else:
+    num_epochs = 100
+    lr_step_size = 40
+
+    dataset = CocoFormatDataset(
+        annotation_path="images/rummy-6-censored/train/_annotations.coco.json",
+        images_dir="images/rummy-6-censored/train",
+        img_sz=640
+    )    
+# test_data_config = SyntheticConfig()
+# test_data_config.dataset_size = 64 if not LOCAL else 4
+# dataset_test = FasterRCNNSynthecticDataset(test_data_config)
+
+dataset_test = CocoFormatDataset(
+    annotation_path="images/coco-test/_annotations.coco.json",
+    images_dir="images/coco-test/",
+    img_sz=640
+)
+
 
 data_loader = torch.utils.data.DataLoader(
     dataset, batch_size=batch_size, num_workers=2,
@@ -40,12 +61,11 @@ optimizer = torch.optim.SGD(params, lr=0.02,
                             momentum=0.9, weight_decay=0.0001)
 
 lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
-                                               step_size=160,
+                                               step_size=lr_step_size,
                                                gamma=0.1)
-wandb.init(project="Rummy", name="FasterRCNN-values-and-colours")
+wandb.init(project="Rummy", name="FasterRCNN-v&c-real")
 
 best_precision = 0
-num_epochs = 1000
 for epoch in range(num_epochs):
     metrics = train_one_epoch(
         model, optimizer, data_loader,

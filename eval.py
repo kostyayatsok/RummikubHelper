@@ -15,18 +15,23 @@ torch.manual_seed(42)
 
 dataset_test = CocoFormatDataset(
     annotation_path="images/coco-test/_annotations.coco.json",
-    images_dir="images/coco-test/")
+    images_dir="images/coco-test/",
+    img_sz=960
+)
 
 data_loader_test = torch.utils.data.DataLoader(
     dataset_test, batch_size=4, num_workers=2,
     collate_fn=utils.collate_fn, pin_memory=False
 )
 
+# weights_file = "checkpoints/FasterRCNN-values-and-colours-1604.pt"
+# weights_file = "checkpoints/FasterRCNN-values-and-colours-1604.pt"
+weights_file = wandb.restore('model.pt', run_path="kostyayatsok/Rummy/1je8atim", replace=False).name
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 model = FasterRCNN()
-model.load_state_dict(torch.load("checkpoints/FasterRCNN-values-and-colours-1604.pt", map_location=device))
+model.load_state_dict(torch.load(weights_file, map_location=device))
 model.to(device)
 
-wandb.init(project="Rummy", name="test")
+wandb.init(project="Rummy", name="test-FasterRCNN-values-and-colours-960")
 evaluate(model, data_loader_test, device, 0)
