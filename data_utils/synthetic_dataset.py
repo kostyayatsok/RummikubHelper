@@ -25,7 +25,7 @@ class SyntheticConfig:
     )
     total_transforms = nn.Sequential(
         T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.05, hue=0.01),
-        T.GaussianBlur(kernel_size=7, sigma=(0.1, 2.0)),
+        T.GaussianBlur(kernel_size=7, sigma=(0.1, 1.5)),
         T.Resize(640)
     )
 

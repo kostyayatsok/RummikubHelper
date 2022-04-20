@@ -52,26 +52,22 @@ def merge():
 def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_class"):
     with open(f"{root_dir}/{base_json}") as f:
         data = json.load(f)
+
+    if labels == "one_class":
+        classes = ["tile"]
+    elif labels == "colors":
+        classes = ["red", "orange", "black", "blue"]
+    elif labels == "values":
+        classes = [str(i) for i in range(1, 14)] + ["j"]
         
-    to_id = {str(i):i for i in range(1, 14)}
-    to_id["j"] = 14
-    to_id["red"] = 1+14
-    to_id["blue"] = 2+14
-    to_id["black"] = 3+14
-    to_id["orange"] = 4+14   
-
-
+    to_id = {c:i+1 for i, c in enumerate(classes)}
+   
     new_data = {
-        "categories": [
-            {'id': 0, 'name': 'rummikub-tails-dataset', 'supercategory': 'none'}
-        ] + [
-            {'id': 1, 'name': 'tile', 'supercategory': 'rummikub-tails-dataset'} \
-                if labels == "one_class" else \
-                    {'id': v, 'name': k, 'supercategory': 'rummikub-tails-dataset'} \
-                        for k, v in to_id.items()
-        ],
+        "categories": [{'id': 0, 'name': 'rummikub-tiles-dataset', 'supercategory': 'none'}] +\
+                      [{'id': v, 'name': k, 'supercategory': 'rummikub-tiles-dataset'} for k, v in to_id.items()],
         "images": data["images"],
         "annotations": [],
+        "classes": classes
     }
 
     old_to_name = {}
@@ -80,18 +76,15 @@ def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_
 
     for a in data["annotations"]:
         
+        val, col = old_to_name[a["category_id"]].split("-")
+
         if labels=="one_class":
             a["category_id"] = 1
             new_data["annotations"].append(a.copy())
-            continue
-
-        val, col = old_to_name[a["category_id"]].split("_")
-
-        if labels == "values" or labels == "values_and_colors":
+        elif labels == "values":
             a["category_id"] = to_id[val]
             new_data["annotations"].append(a.copy())    
-        
-        if labels == "colors" or labels == "values_and_colors":
+        elif labels == "colors":
             a["category_id"] = to_id[col]
             new_data["annotations"].append(a.copy())
 
@@ -105,9 +98,7 @@ if __name__ == "__main__":
     {'id': 0, 'license': 1, 'file_name': '286-photo_jpg.rf.069b7d50f62ab1cb520dde801e4bca39.jpg', 'height': 598, 'width': 810, 'date_captured': '2022-04-06T09:17:48+00:00'}
     {'id': 0, 'image_id': 0, 'category_id': 46, 'bbox': [335, 179, 34, 53], 'area': 1802, 'segmentation': [], 'iscrowd': 0}
     '''
-    merge()
-    create_annotation("images/generated/coco-wide/train", "_merged.coco.json", "one_class")
-    create_annotation("images/generated/coco-wide/train", "_merged.coco.json", "colors")
-    create_annotation("images/generated/coco-wide/train", "_merged.coco.json", "values")
-    create_annotation("images/generated/coco-wide/train", "_merged.coco.json", "values_and_colors")
-
+    # merge()
+    create_annotation("images/generated/ultimate/train", "_annotations.coco.json", "colors")
+    create_annotation("images/generated/ultimate/train", "_annotations.coco.json", "values")
+    create_annotation("images/generated/ultimate/train", "_annotations.coco.json", "one_class")
