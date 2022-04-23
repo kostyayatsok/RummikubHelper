@@ -6,6 +6,7 @@ from training import utils
 import torch
 from models import FasterRCNN
 import wandb
+import pandas as pd
 
 torch.manual_seed(42)
 
@@ -14,9 +15,13 @@ torch.manual_seed(42)
 # dataset_test = FasterRCNNSynthecticDataset(test_data_config)
 
 dataset_test = CocoFormatDataset(
-    annotation_path="images/coco-test/_annotations.coco.json",
-    images_dir="images/coco-test/",
-    img_sz=960
+    # annotation_path="images/coco-test-640/_annotations.coco.json",
+    # annotation_path="images/coco-test-640/_one_class.coco.json",
+    # annotation_path="images/coco-test-640/_colors.coco.json",
+    annotation_path="images/coco-test-640/_values.coco.json",
+    images_dir="images/coco-test-640/",
+    img_sz=640,
+    relabel=False
 )
 
 data_loader_test = torch.utils.data.DataLoader(
@@ -24,16 +29,22 @@ data_loader_test = torch.utils.data.DataLoader(
     collate_fn=utils.collate_fn, pin_memory=False
 )
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 # weights_file = "checkpoints/FasterRCNN-values-and-colours-1604.pt"
 # weights_file = "checkpoints/FasterRCNN-values-and-colours-1604.pt"
 # weights_file = wandb.restore('model.pt', run_path="kostyayatsok/Rummy/1je8atim", replace=True).name
 # weights_file = wandb.restore('model.pt', run_path="kostyayatsok/Rummy/1qhtyzl2", replace=True).name
-weights_file = wandb.restore('model.pt', run_path="kostyayatsok/Rummy/1l7luhf0", replace=True).name
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+if False:
+    weights_file = wandb.restore('model.pt', run_path="kostyayatsok/Rummy/1l7luhf0", replace=True).name
 
-model = FasterRCNN()
-model.load_state_dict(torch.load(weights_file, map_location=device))
-model.to(device)
+    model = FasterRCNN()
+    model.load_state_dict(torch.load(weights_file, map_location=device))
+    model.to(device)
 
-wandb.init(project="Rummy", name="test-FasterRCNN-v&c-mix-960")
-evaluate(model, data_loader_test, device, 0)
+    wandb.init(project="RummyTest", name="FasterRCNN-v&c-mix-960")
+    evaluate(model=model, loader=data_loader_test, device=device, epoch=-1)
+else:
+    name = 'values_yolox_s'
+    model_out = pd.read_json(f"predictions/{name}_predictions.bbox.json")
+    wandb.init(project="RummyTest", name=name)
+    evaluate(model_out=model_out, loader=data_loader_test, device=device, epoch=-1)

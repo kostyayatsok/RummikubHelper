@@ -5,7 +5,7 @@ if __name__ == "__main__":
 import torch
 import numpy as np
 from data_utils.synthetic_dataset import SyntheticConfig, SyntheticDataset
-from utils.plot import plot
+# from utils.plot import plot
 
 class FasterRCNNSynthecticDataset(SyntheticDataset):
     def __init__(self, config=SyntheticConfig()):

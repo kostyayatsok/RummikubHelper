@@ -8,7 +8,7 @@ sys.path.append('.')
 from data_utils.synthetic_dataset import SyntheticConfig, SyntheticDataset
 from math import floor
 
-VERSION = "ultimate"
+VERSION = "stacked"
 PATH = f"images/generated/{VERSION}"
 PART = "train"
 # PART = "val"

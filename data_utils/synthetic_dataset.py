@@ -1,23 +1,28 @@
+if __name__ == "__main__":
+    import sys
+    sys.path.append(".")
+
 import glob
 from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
-from data_utils.utils import get_label_encoders
-from utils.plot import plot
+from utils.tools import get_label_encoders
+# from utils.plot import plot
 from torchvision.io import read_image
 from torch.utils.data import Dataset
 from typing import Tuple
 import cv2
 import numpy as np
+from scipy import ndimage
 
 class SyntheticConfig:
     background_path: str="images/backgrounds"
-    tiles_path: str="images/tiles"
+    tiles_path: str="images/tiles_aligned"
 
     dataset_size: int=10000
 
-    scale: Tuple=(0.05, 0.33)
+    scale: Tuple=(0.06, 0.33)
     image_size: int=640
     tile_transforms = nn.Sequential(
         T.RandomRotation(degrees=360, expand=True),
@@ -50,8 +55,111 @@ class SyntheticDataset(Dataset):
     def __len__(self):
         return self.config.dataset_size
     
-    def stack_tiles(tile1, tile2):
-        raise "Not implemented"
+    def stack_tiles(self, n, resize_fn):
+        tiles = []
+        bboxes = []
+        labels = []
+
+        shift = 0
+        for i in range(n):
+            type_idx = torch.randint(0, self.n_types, (1,))[0]
+            tile_idx = torch.randint(0, len(self.tiles[type_idx]), (1,))[0]
+            tile_path = self.tiles[type_idx][tile_idx]
+            
+            value, color = tile_path.split('/')[-2].split('-')
+            labels.append(self.to_id[value+'-'+color])
+            
+            tile = read_image(tile_path) / 255.
+            tile = tile[:,:,int(tile.size(-1)*0.05):-int(tile.size(-1)*0.05)]
+            tile = tile[:,int(tile.size(-2)*0.05):-int(tile.size(-2)*0.05),:]
+            tile = resize_fn(tile)
+
+            if i > 0 and tile.size(1) != tiles[-1].size(1):
+                tile = torch.nn.functional.pad(tile, (0, 0, 0, tiles[-1].size(1) - tile.size(1)))
+            
+            tiles.append(tile)
+
+            c, h, w = tile.shape
+            corners = np.array([shift, 0, w, h])
+            bboxes.append(corners)
+
+            shift += w
+        return torch.cat(tiles, dim=-1), labels, bboxes
+
+    def rotate_row(self, row, bboxes, max_angle=180):
+        angle = (2*torch.rand((1,))[0].item()-1)*max_angle
+        origin = (row.size(-1)//2, row.size(-2)//2)
+        # origin = (0, 0)
+        old_shape = row.shape
+        rotated_row = T.functional.rotate(row, angle,expand=True)
+        new_shape = rotated_row.shape
+
+        rotated_bboxes = []
+        for x0, y0, w, h in bboxes:
+            corners = [
+                [x0, y0],
+                [x0+w, y0],
+                [x0, y0+h],
+                [x0+w, y0+h],
+            ]
+            x_min, x_max, y_min, y_max = 1e9, -1e9, 1e9, -1e9
+            for corner in corners:
+                new_corner = self.rotatePoint(
+                    (corner[0], old_shape[1]-corner[1]),
+                    origin,
+                    angle
+                )
+                # print((corner[0], old_shape[1]-corner[1]), new_corner)
+                x_min = min(new_corner[0], x_min)
+                x_max = max(new_corner[0], x_max)
+                y_min = min(new_corner[1], y_min)
+                y_max = max(new_corner[1], y_max)
+            rotated_bboxes.append([x_min, y_max, x_max-x_min, y_max-y_min])
+        rotated_bboxes = torch.tensor(rotated_bboxes)
+        # print(rotated_bboxes)
+        rotated_bboxes[:,0] += (new_shape[-1] - old_shape[-1])//2
+        rotated_bboxes[:,1] += (new_shape[-2] - old_shape[-2])//2
+        rotated_bboxes[:,1] = new_shape[-2] - rotated_bboxes[:,1]
+        rotated_bboxes = torch.maximum(torch.zeros_like(rotated_bboxes), rotated_bboxes)
+        return rotated_row, rotated_bboxes
+
+    def rotatePoint(self, p, origin=(0, 0), degrees=0):
+        angle = np.deg2rad(degrees)
+        R = np.array([[np.cos(angle), -np.sin(angle)],
+                      [np.sin(angle),  np.cos(angle)]])
+        o = np.atleast_2d(origin)
+        p = np.atleast_2d(p)
+        return np.squeeze((R @ (p.T-o.T) + o.T).T)
+
+
+    def put_one_row(self, background, tile_size, y0,):
+        x0 = 10
+        y0 = int(y0)
+        background_size = min(background.size(1), background.size(2))
+        resize_fn = T.Resize(tile_size, max_size=tile_size+1)
+
+        row, labels, bboxes = self.stack_tiles(background_size//tile_size, resize_fn)
+        # print(bboxes)
+        # plt.imshow(row.numpy().transpose((1, 2, 0)))
+        # plt.show()
+        row, bboxes = self.rotate_row(row, bboxes, max_angle=10)
+        # print(bboxes)
+        # plt.imshow(row.numpy().transpose((1, 2, 0)))
+        # plt.show()
+        w = min(row.shape[-1], background_size)
+        h = min(row.shape[-2], background_size)
+
+        row = row[:,:h,:w]
+        mask = (row.sum(0) > 0.)
+        if y0+h > background_size:
+            return background, [], []
+        background[:, y0:y0+h, x0:x0+w][:, mask] = row[:, mask]
+        for bbox in bboxes:
+            bbox[0] += x0
+            bbox[1] += y0
+        
+        return background, labels, bboxes 
+
 
     def __getitem__(self, idx: int):
         # choose random background
@@ -66,54 +174,36 @@ class SyntheticDataset(Dataset):
         tile_size = torch.rand(1) * (self.config.scale[1] - \
                         self.config.scale[0]) + self.config.scale[0]
         tile_size = int(background_size * tile_size)
-        resize_fn = T.Resize(tile_size, max_size=tile_size+1)
-        x0, y0 = 0, 0
         
-        annotation = []
-        while x0 < background_size and y0 < background_size:
-            type_idx = torch.randint(0, self.n_types, (1,))[0]
-            tile_idx = torch.randint(0, len(self.tiles[type_idx]), (1,))[0]
-            tile_path = self.tiles[type_idx][tile_idx]
-            
-            value, color = tile_path.split('/')[-2].split('-')
-            
-            tile = read_image(tile_path) / 255.
-            tile = resize_fn(tile)
-            tile = self.config.tile_transforms(tile)
-            
-            mask = (tile.sum(dim=0) > 0.)
-            x, y, w, h = cv2.boundingRect(mask.numpy().astype(np.uint8))
-            tile = tile[:, y:y+h, x:x+w]
-            mask = (tile.sum(dim=0) > 0.)
+        labels = []
+        bboxes = []
+        y0 = 0
+        while y0 + 1.5*tile_size < background_size:
+            background, label, bbox = self.put_one_row(background, tile_size, y0)
+            labels.extend(label)
+            bboxes.extend(bbox)
+            y0 += 1.5*tile_size
 
-            _, tile_h, tile_w = tile.shape
-            if x0+tile_w >= background_size:
-                x0 = 0
-                if len(annotation):
-                    y0 += tile_size
-                else:
-                    y0 = min(y0+tile_size, background_size-tile_size)
-            if y0 >= background_size:
-                break
-            x1 = min(x0+tile_w, background_size)
-            y1 = min(y0+tile_h, background_size)
-            mask = mask[:y1-y0, :x1-x0]
-            background[:, y0:y1, x0:x1][:, mask] = tile[:, :y1-y0, :x1-x0][:, mask]
-            annotation.append({
-                "label": self.to_id[value+'-'+color],
-                "x0": x0 / background_size,
-                "y0": y0 / background_size,
-                "w": tile_w / background_size,
-                "h": tile_h / background_size
-            })
-            x0 = x1
-    
+        background, bboxes = self.rotate_row(background, bboxes, max_angle=180)
+        background_size = min(background.size(1), background.size(2))
+
+        annotation = [{
+            "label": label,
+            "x0"   : bbox[0]/background_size,
+            "y0"   : bbox[1]/background_size,
+            "w"    : bbox[2]/background_size,
+            "h"    : bbox[3]/background_size
+        } for label, bbox in zip(labels, bboxes)]
+
+
         final_image = self.config.total_transforms(background)
-        
         return final_image, annotation
+
 
 if __name__ == "__main__":
     dataset = SyntheticDataset()
     id2label = {v:k for k, v in dataset.to_id.items()}
     for image, label in dataset:
-        plot(image.numpy().transpose((1, 2, 0)), label.numpy(), id2label)
+        plt.imshow(image.numpy().transpose((1, 2, 0)))
+        plt.show()
+        # plot(image.numpy().transpose((1, 2, 0)), label.numpy(), id2label)

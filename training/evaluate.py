@@ -7,9 +7,12 @@ from collections import defaultdict
 
 def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
     positives = defaultdict(list)
-    negatives = defaultdict(int)
+    negatives = []
 
     for i in range(len(predictions)):
+        negatives.append({})
+        for true_idx in range(len(ground_truth[i]["boxes"])):            
+            negatives[i][true_idx] = -1
         for pred_idx in range(len(predictions[i]["boxes"])):
             used = False
             for true_idx in range(len(ground_truth[i]["boxes"])):            
@@ -29,8 +32,10 @@ def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
                     positives["correct"].append(int(correct))
                     positives["image_id"].append(ground_truth[i]["image_id"][0])
 
-                negatives[true_idx] = max(negatives[true_idx],
-                                        predictions[i]["scores"][pred_idx]*correct)
+                    negatives[i][true_idx] = max(
+                        negatives[i][true_idx],
+                        predictions[i]["scores"][pred_idx]*correct
+                    )
 
             if not used: 
                 positives["iou"].append(0)
@@ -43,8 +48,8 @@ def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
     for key in positives:
         positives[key] = np.array(positives[key])
     
-    negatives = np.array([val for val in negatives.values()])
-    
+    negatives = np.array([[val for val in img.values()] for img in negatives])
+    negatives = np.concatenate(negatives)
     return positives, negatives
 
 def pr_curve(positives, negatives):
@@ -63,21 +68,88 @@ def pr_curve(positives, negatives):
         metrics.append([precision, recall])
     return metrics
 
+def wandbBBoxes(bboxes, scores, labels, to_name):
+    all_bboxes = []
+    for box, score, label in zip(bboxes, scores, labels):
+        all_bboxes.append({
+            "position" : {
+                "minX" : int(box[0]),
+                "minY" : int(box[1]),
+                "maxX" : int(box[2]),
+                "maxY" : int(box[3])
+            },
+            "class_id" : int(label.item()),
+            "box_caption" : f"{to_name[label]} ({score:.3f})",
+            "scores" : { "score" : score.item() },
+            "domain" : "pixel",
+        })
+    return all_bboxes
+
 
 @torch.no_grad()
-def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95):
-    model.eval()
-
+def evaluate(loader, device, epoch, model=None, model_out=None, iou_threshold=0.5, target_recall=0.95):
+    if model is not None:
+        model.eval()
+    elif model_out is not None:
+        model_out["bbox"] = model_out["bbox"].apply(lambda x: [x[0], x[1], x[0]+x[2], x[1]+x[3]])
+        model_out = model_out.groupby("image_id").agg(list)
+        model_out = model_out.rename(columns={
+            "bbox": "boxes",
+            "score": "scores",
+            "category_id": "labels"
+        })
+    else:
+        raise "You sholud provide either model or model_out"
     predictions = []
     ground_truth = []
-    all_images = []
     for images, targets in tqdm(loader, total=len(loader)):
         images = [image.to(device) for image in images]
-        out = model(images, targets)
-        
-        predictions.extend([{k:v.cpu() for k, v in o.items()} for o in out])
+
+        if model is not None:
+            out = model(images, targets)
+            out = [{k:v.cpu() for k, v in o.items()} for o in out]
+        else:
+            out = []
+            for gt in targets:
+                image_id = gt["image_id"][0].item()
+                if image_id in model_out.index:
+                    out.append(model_out.loc[image_id].to_dict())
+                else:
+                    out.append({"boxes":[], "scores":[], "labels":[]})
+
+            out = [{k:torch.tensor(v) for k, v in o.items()} for o in out]
+
+            
+        for image, target, pred in zip(images, targets, out):
+            wandb.log({
+                f"examples/example" : wandb.Image(
+                    image.cpu().numpy().transpose([1, 2, 0]),
+                    boxes = {
+                        "predictions": {
+                            "box_data": wandbBBoxes(
+                                pred["boxes"].cpu().numpy(),
+                                pred["scores"].cpu().numpy(),
+                                pred["labels"].cpu().numpy(),
+                                loader.dataset.to_name
+                            ),
+                            "class_labels": loader.dataset.to_name
+                        },
+                        "ground_truth": {
+                            "box_data": wandbBBoxes(
+                                target["boxes"].numpy(),
+                                np.ones_like(target["labels"].numpy()),
+                                target["labels"].numpy(),
+                                loader.dataset.to_name
+                            ),
+                            "class_labels": loader.dataset.to_name
+                        }
+                    }
+                )
+            })
+
+
+        predictions.extend(out)
         ground_truth.extend(targets)
-        all_images.extend(images)
 
     positives, negatives = positives_and_negatives(
                                     ground_truth, predictions, iou_threshold)
@@ -99,49 +171,6 @@ def evaluate(model, loader, device, epoch, iou_threshold=0.5, target_recall=0.95
         f"precision@{target_recall}": precision_at_target_recall,
         f"epoch": epoch
     }
-
-
-    def wandbBBoxes(bboxes, scores, labels):
-        all_bboxes = []
-        for box, score, label in zip(bboxes, scores, labels):
-            all_bboxes.append({
-                "position" : {
-                    "minX" : int(box[0]),
-                    "minY" : int(box[1]),
-                    "maxX" : int(box[2]),
-                    "maxY" : int(box[3])
-                },
-                "class_id" : int(label.item()),
-                "box_caption" : f"{loader.dataset.to_name[label]} ({score:.3f})",
-                "scores" : { "score" : score.item() },
-                "domain" : "pixel",
-            })
-        return all_bboxes
-
-    for i, (image, target, pred) in enumerate(zip(all_images, ground_truth, predictions)):
-        log_dict.update({
-            f"examples/example-{i:02d}" : wandb.Image(
-                image.cpu().numpy().transpose([1, 2, 0]),
-                boxes = {
-                    "predictions": {
-                        "box_data": wandbBBoxes(
-                            pred["boxes"].cpu().numpy(),
-                            pred["scores"].cpu().numpy(),
-                            pred["labels"].cpu().numpy()
-                        ),
-                        "class_labels": loader.dataset.to_name
-                    },
-                    "ground_truth": {
-                        "box_data": wandbBBoxes(
-                            target["boxes"].numpy(),
-                            np.ones_like(target["labels"].numpy()),
-                            target["labels"].numpy()
-                        ),
-                        "class_labels": loader.dataset.to_name
-                    }
-                }
-            )
-        })
 
     wandb.log(log_dict)
     return log_dict

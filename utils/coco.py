@@ -1,6 +1,11 @@
+import sys
+sys.path.append(".")
+
 import json
 import os
+import cv2
 
+from utils.toSquare import toSquare
 def merge():
     with open("images/generated/coco-wide/train/_annotations.coco.json") as f:
         data = json.load(f)
@@ -91,6 +96,49 @@ def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_
     with open(f"{root_dir}/_{labels}.coco.json", "w") as f:
         json.dump(new_data, f)
 
+def resize(root_dir, base_json="_annotations.coco.json"):
+    with open(f"{root_dir}/{base_json}") as f:
+        data = json.load(f)
+
+    for category in data["categories"]:
+        category["name"] = category["name"].replace('_', '-')
+
+    ratios = {}
+    for image in data["images"]:
+        img = cv2.imread(f"{root_dir}/{image['file_name']}")
+        img = toSquare(img, 640)
+        cv2.imwrite(f"{root_dir}/{image['file_name']}", img)
+        ratios[image["id"]] = 640 / max(image["height"], image["width"])
+        image["height"]=640
+        image["width"]=640
+
+    for ann in data["annotations"]:
+        ratio = ratios[ann["image_id"]]
+        ann["bbox"] = [int(ann["bbox"][i]*ratio) for i in range(4)]
+        ann["area"] = int(ann["area"]*ratio*ratio)
+        
+    with open(f"{root_dir}/{base_json}", "w") as f:
+        json.dump(data, f)
+
+def recategorize(source_json, reference_json):
+    with open(source_json) as f:
+        source = json.load(f)
+    with open(reference_json) as f:
+        reference = json.load(f)
+
+    old_id_to_name = {}
+    for category in source["categories"]:
+        old_id_to_name[category["id"]] = category["name"]
+    new_name_to_id = {}
+    for category in reference["categories"]:
+        new_name_to_id[category["name"]] = category["id"]
+    for annotation in source["annotations"]:
+        annotation["category_id"] = new_name_to_id[old_id_to_name[annotation["category_id"]]]
+    source["categories"] = reference["categories"]
+
+    with open(source_json, "w") as f:
+        json.dump(source, f)
+
 if __name__ == "__main__":
     '''
     dict_keys(['info', 'licenses', 'categories', 'images', 'annotations'])
@@ -98,7 +146,11 @@ if __name__ == "__main__":
     {'id': 0, 'license': 1, 'file_name': '286-photo_jpg.rf.069b7d50f62ab1cb520dde801e4bca39.jpg', 'height': 598, 'width': 810, 'date_captured': '2022-04-06T09:17:48+00:00'}
     {'id': 0, 'image_id': 0, 'category_id': 46, 'bbox': [335, 179, 34, 53], 'area': 1802, 'segmentation': [], 'iscrowd': 0}
     '''
-    # merge()
-    create_annotation("images/generated/ultimate/train", "_annotations.coco.json", "colors")
-    create_annotation("images/generated/ultimate/train", "_annotations.coco.json", "values")
-    create_annotation("images/generated/ultimate/train", "_annotations.coco.json", "one_class")
+    recategorize("images/coco-test-640/_annotations.coco.json",
+                 "images/generated/stacked/train/_annotations.coco.json")
+    # path = "images/coco-test-640/"
+    # base_json = "_annotations.coco.json"
+    # # resize(path)
+    # create_annotation(path, base_json, "colors")
+    # create_annotation(path, base_json, "values")
+    # create_annotation(path, base_json, "one_class")

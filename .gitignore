@@ -131,10 +131,10 @@ dmypy.json
 images/*
 comparation/setdetection/output/
 coco-viewer/
-predictions/
 tmp.py
 .vscode
 images.zip
 wandb
 model.pt
 checkpoints/
+solver

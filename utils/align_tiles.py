@@ -1,9 +1,12 @@
 import glob
 import os
+from traceback import print_tb
+from matplotlib import pyplot as plt
 import numpy as np
 # import cv2 as cv
 import cv2
 from tqdm import tqdm
+from scipy import ndimage
 
 def align1(img):
     gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
@@ -141,20 +144,20 @@ def align2(image):
     cv2.imshow('result', result)
     cv2.waitKey()
 
-def align(image):
-    def rotate_image(image, angle):
-        image_center = tuple(np.array(image.shape[1::-1]) / 2)
-        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-        result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-        if len(result.shape) == 2:
-            x, y, w, h = cv2.boundingRect(result)
-            result = result[y:y+h, x:x+w]
-        else:
-            mask = (result.sum(2) > 0).astype(np.uint8) * 255
-            # cv2.imshow("mask", mask)
-            x, y, w, h = cv2.boundingRect(mask)
-            result = result[y:y+h, x:x+w, :]
-        return result
+def rotate_image(image, angle):
+    image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    # if len(result.shape) == 2:
+    #     x, y, w, h = cv2.boundingRect(result)
+    #     result = result[y:y+h, x:x+w]
+    # else:
+    #     mask = (result.sum(2) > 0).astype(np.uint8) * 255
+    #     # cv2.imshow("mask", mask)
+    #     x, y, w, h = cv2.boundingRect(mask)
+    #     result = result[y:y+h, x:x+w, :]
+    return result
+def align3(image):
 
     original = image.copy()
     image = (image.sum(2) > 0).astype(np.uint8) * 255
@@ -183,11 +186,34 @@ def align(image):
         result = result.transpose([1,0,2])
     return result
 
+def align(image):
+    original = image.copy()
+    image = (image.sum(2) > 0).astype(np.uint8) * 255
+    ret,thresh = cv2.threshold(image,127,255,0)
+    contours,hierarchy = cv2.findContours(thresh, 1, 2)
+    cnt = contours[0]
+    rect = cv2.minAreaRect(cnt)
+    box = cv2.boxPoints(rect)
+    # box = np.int0(box)
+    # img = cv2.drawContours(original,[box],0,(0,0,255),2)
+    # plt.imshow(img)
+    # plt.show()
+    # return original
+    result = ndimage.rotate(original, rect[-1])
+
+    mask = (result.sum(2) > 0).astype(np.uint8) * 255
+    x, y, w, h = cv2.boundingRect(mask)
+    result = result[y:y+h, x:x+w, :]
+    
+    if result.shape[0] < result.shape[1]:
+        result = ndimage.rotate(result, 90)
+    return result
+
 if __name__ == "__main__":
-    os.makedirs("images/tiles_aligned/")
+    os.makedirs("images/tiles_aligned/", exist_ok=True)
     for tile_dir in tqdm(glob.glob("images/tiles/*")):
         new_tile_dir = "images/tiles_aligned/"+tile_dir.split('/')[-1]
-        os.makedirs(new_tile_dir)
+        os.makedirs(new_tile_dir, exist_ok=True)
         for image_path in glob.glob(tile_dir+"/*.png"):
             image = cv2.imread(image_path)
             # image = np.pad(image, ((100, 100), (100, 100), (0, 0)))
