@@ -8,11 +8,11 @@ sys.path.append('.')
 from data_utils.synthetic_dataset import SyntheticConfig, SyntheticDataset
 from math import floor
 
-VERSION = "stacked"
+VERSION = "stacked-1280"
 PATH = f"images/generated/{VERSION}"
 PART = "train"
 # PART = "val"
-IMG_SIZE = 640
+IMG_SIZE = 1280
 FORMAT = "COCO"
 
 if PART == 'val':
@@ -20,9 +20,6 @@ if PART == 'val':
 else:
     N_SAMPLES = 2000
 
-# Create list of classes names
-classes_names = [str(i) for i in range(1, 14)] +\
-                ["j", "blue", "black", "orange", "red"]
 
 classes_names = []
 for val in [str(i) for i in range(1, 14)] + ["j"]:

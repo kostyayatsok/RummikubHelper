@@ -30,7 +30,8 @@ if True:
     fouc.add_coco_labels(
         dataset,
         label_field=pred_label,
-        labels_or_path=f"predictions/values_yolox_s_predictions.bbox.json",
+        # labels_or_path=f"predictions/tiles_stacked_yolov3_predictions.bbox.json",
+        labels_or_path=f"predictions/values_yolox_l_predictions.bbox.json",
         # labels_or_path=f"values_synth_fasterRCNN_predictions.bbox.json",
         # labels_or_path=f"colors_fasterRCNN_synthetic_predictions.bbox.json",
         # labels_or_path=f"colors_fasterRCNN_predictions.json",

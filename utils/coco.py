@@ -96,7 +96,7 @@ def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_
     with open(f"{root_dir}/_{labels}.coco.json", "w") as f:
         json.dump(new_data, f)
 
-def resize(root_dir, base_json="_annotations.coco.json"):
+def resize(root_dir, size=640, base_json="_annotations.coco.json"):
     with open(f"{root_dir}/{base_json}") as f:
         data = json.load(f)
 
@@ -106,11 +106,11 @@ def resize(root_dir, base_json="_annotations.coco.json"):
     ratios = {}
     for image in data["images"]:
         img = cv2.imread(f"{root_dir}/{image['file_name']}")
-        img = toSquare(img, 640)
+        img = toSquare(img, size)
         cv2.imwrite(f"{root_dir}/{image['file_name']}", img)
-        ratios[image["id"]] = 640 / max(image["height"], image["width"])
-        image["height"]=640
-        image["width"]=640
+        ratios[image["id"]] = size / max(image["height"], image["width"])
+        image["height"]=size
+        image["width"]=size
 
     for ann in data["annotations"]:
         ratio = ratios[ann["image_id"]]
@@ -128,7 +128,7 @@ def recategorize(source_json, reference_json):
 
     old_id_to_name = {}
     for category in source["categories"]:
-        old_id_to_name[category["id"]] = category["name"]
+        old_id_to_name[category["id"]] = category["name"].replace('_', '-')
     new_name_to_id = {}
     for category in reference["categories"]:
         new_name_to_id[category["name"]] = category["id"]
@@ -146,11 +146,11 @@ if __name__ == "__main__":
     {'id': 0, 'license': 1, 'file_name': '286-photo_jpg.rf.069b7d50f62ab1cb520dde801e4bca39.jpg', 'height': 598, 'width': 810, 'date_captured': '2022-04-06T09:17:48+00:00'}
     {'id': 0, 'image_id': 0, 'category_id': 46, 'bbox': [335, 179, 34, 53], 'area': 1802, 'segmentation': [], 'iscrowd': 0}
     '''
-    recategorize("images/coco-test-640/_annotations.coco.json",
-                 "images/generated/stacked/train/_annotations.coco.json")
-    # path = "images/coco-test-640/"
-    # base_json = "_annotations.coco.json"
-    # # resize(path)
-    # create_annotation(path, base_json, "colors")
-    # create_annotation(path, base_json, "values")
-    # create_annotation(path, base_json, "one_class")
+    # recategorize("images/coco-test/_annotations.coco.json",
+    #              "images/coco-test-640/_annotations.coco.json")
+    path = "images/coco-test-1280/"
+    base_json = "_annotations.coco.json"
+    resize(path, 1280)
+    create_annotation(path, base_json, "colors")
+    create_annotation(path, base_json, "values")
+    create_annotation(path, base_json, "one_class")

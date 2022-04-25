@@ -44,7 +44,7 @@ if False:
     wandb.init(project="RummyTest", name="FasterRCNN-v&c-mix-960")
     evaluate(model=model, loader=data_loader_test, device=device, epoch=-1)
 else:
-    name = 'values_yolox_s'
+    name = 'values_yolox_l'
     model_out = pd.read_json(f"predictions/{name}_predictions.bbox.json")
     wandb.init(project="RummyTest", name=name)
     evaluate(model_out=model_out, loader=data_loader_test, device=device, epoch=-1)

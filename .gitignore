@@ -138,3 +138,6 @@ wandb
 model.pt
 checkpoints/
 solver
+yolor/
+yolov5/
+**/*.Identifier

@@ -18,6 +18,7 @@ const int S = 3;  // # min len
 // n×k×f(M) multi-dimensional array which contains the maximum
 // score that can be obtained given this state of the puzzle
 vector<vector<int>> scores;
+vector<int> scoresMemory;
 
 vector<vector<int>> hand(N, vector<int>(K));
 vector<vector<int>> board(N, vector<int>(K));;
@@ -63,6 +64,17 @@ int combineHashes(vector<int> &hashes)
     return result;
 }
 
+vector<int> splitHashes(int totalHash)
+{
+    vector<int> hashes(K);
+    for (int &hash : hashes)
+    {
+        hash = totalHash % maxHash;
+        totalHash /= maxHash;
+    }
+    return hashes;
+}
+
 void init()
 {
     maxHash = 1;
@@ -80,6 +92,7 @@ void init()
         maxTotalHash *= maxHash;
     }
     scores.resize(N, vector<int>(maxTotalHash, -INF));
+    scoresMemory.resize(N, -1);
 }
 
 
@@ -245,12 +258,17 @@ int maxScore(int value, vector<int> &runsHashes)
     vector<pair<vector<int>, int>> newRunsHashes = makeRuns(runsHashes, value);
     for (int i = 0; i < newRunsHashes.size(); i++)
     {
-        int cur_score = newRunsHashes[i].second;
-        int next_score = maxScore(value+1, newRunsHashes[i].first);
-        if (next_score > -INF)
+        int curScore = newRunsHashes[i].second;
+        int nextScore = maxScore(value+1, newRunsHashes[i].first);
+        if (nextScore > -INF)
         {
-            scores[value][totalRunsHash] = max(scores[value][totalRunsHash], cur_score+next_score);
+            if (scores[value][totalRunsHash] < curScore+nextScore)
+            {
+                scores[value][totalRunsHash] = curScore+nextScore;
+                scoresMemory[value] = combineHashes(newRunsHashes[i].first);
+            }
         }
+
     }
     return scores[value][totalRunsHash];
 }
@@ -270,6 +288,20 @@ int main()
     // hand[1][3] = 1;
 
     vector<int> runsHashes(K);
-    cout << maxScore(0, runsHashes) << "\n"; 
+    int score = maxScore(0, runsHashes);
+    cout << score << "\n";
+    if (score > -INF)
+    {
+        for (int runsHash : scoresMemory)
+        {
+            vector<int> runsHashes = splitHashes(runsHash);
+            for (int i = 0; i < K; i++)
+            {
+                vector<int> run = unhashRun(runsHashes[i]);
+                // TODO:
+            }
+        }
+    }
+
     return 0;
 }

@@ -31,7 +31,6 @@ class SyntheticConfig:
     total_transforms = nn.Sequential(
         T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.05, hue=0.01),
         T.GaussianBlur(kernel_size=7, sigma=(0.1, 1.5)),
-        T.Resize(640)
     )
 
 class SyntheticDataset(Dataset):
@@ -197,6 +196,7 @@ class SyntheticDataset(Dataset):
 
 
         final_image = self.config.total_transforms(background)
+        final_image = T.Resize(self.config.image_size)(final_image)
         return final_image, annotation
 
 
