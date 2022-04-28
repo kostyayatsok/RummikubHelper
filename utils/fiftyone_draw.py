@@ -13,6 +13,7 @@ data_path = "images/coco-test-640"
 # labels_path = f"{data_path}/_colors.coco.json"
 # labels_path = f"{data_path}/_annotations.coco.json"
 labels_path = f"{data_path}/_values.coco.json"
+# labels_path = f"{data_path}/_values+colors.coco.json"
 
 # Import the dataset
 dataset = fo.Dataset.from_dir(
@@ -27,11 +28,14 @@ if True:
     pred_label = "predictions"
     # classes=["red", "blue", "black", "orange"]
     classes=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13']
+    # classes=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', 'j', "red", "blue", "black", "orange"]
     fouc.add_coco_labels(
         dataset,
         label_field=pred_label,
+        # labels_or_path=f"predictions/values_yolov5l_predictions.bbox.json",
         # labels_or_path=f"predictions/tiles_stacked_yolov3_predictions.bbox.json",
         labels_or_path=f"predictions/values_yolox_l_predictions.bbox.json",
+        # labels_or_path=f"predictions/values+colors_yolox_s_predictions.bbox.json",
         # labels_or_path=f"values_synth_fasterRCNN_predictions.bbox.json",
         # labels_or_path=f"colors_fasterRCNN_synthetic_predictions.bbox.json",
         # labels_or_path=f"colors_fasterRCNN_predictions.json",

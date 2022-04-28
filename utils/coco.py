@@ -64,7 +64,11 @@ def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_
         classes = ["red", "orange", "black", "blue"]
     elif labels == "values":
         classes = [str(i) for i in range(1, 14)] + ["j"]
-        
+    elif labels == "values+colors":
+        classes = []
+        classes += [str(i) for i in range(1, 14)] + ["j"]
+        classes += ["red", "orange", "black", "blue"]
+
     to_id = {c:i+1 for i, c in enumerate(classes)}
    
     new_data = {
@@ -79,6 +83,7 @@ def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_
     for a in data["categories"]:
         old_to_name[a["id"]] = a["name"]
 
+    id = 1
     for a in data["annotations"]:
         
         val, col = old_to_name[a["category_id"]].split("-")
@@ -91,6 +96,16 @@ def create_annotation(root_dir, base_json="_annotations.coco.json", labels="one_
             new_data["annotations"].append(a.copy())    
         elif labels == "colors":
             a["category_id"] = to_id[col]
+            new_data["annotations"].append(a.copy())
+        elif labels == "values+colors":
+            a["category_id"] = to_id[val]
+            a["id"] = id
+            id += 1
+            new_data["annotations"].append(a.copy())
+            
+            a["category_id"] = to_id[col]
+            a["id"] = id
+            id += 1
             new_data["annotations"].append(a.copy())
 
     with open(f"{root_dir}/_{labels}.coco.json", "w") as f:
@@ -148,9 +163,11 @@ if __name__ == "__main__":
     '''
     # recategorize("images/coco-test/_annotations.coco.json",
     #              "images/coco-test-640/_annotations.coco.json")
-    path = "images/coco-test-1280/"
+    path = "images/coco-test-640/"
+    # path = "images/generated/stacked/train/"
     base_json = "_annotations.coco.json"
-    resize(path, 1280)
-    create_annotation(path, base_json, "colors")
-    create_annotation(path, base_json, "values")
-    create_annotation(path, base_json, "one_class")
+    # resize(path, 1280)
+    create_annotation(path, base_json, "values+colors")
+    # create_annotation(path, base_json, "colors")
+    # create_annotation(path, base_json, "values")
+    # create_annotation(path, base_json, "one_class")

@@ -32,10 +32,11 @@ def positives_and_negatives(ground_truth, predictions, iou_threshold=0.5):
                     positives["correct"].append(int(correct))
                     positives["image_id"].append(ground_truth[i]["image_id"][0])
 
-                    negatives[i][true_idx] = max(
-                        negatives[i][true_idx],
-                        predictions[i]["scores"][pred_idx]*correct
-                    )
+                    if correct:
+                        negatives[i][true_idx] = max(
+                            negatives[i][true_idx],
+                            predictions[i]["scores"][pred_idx]
+                        )
 
             if not used: 
                 positives["iou"].append(0)
@@ -164,6 +165,7 @@ def evaluate(loader, device, epoch, model=None, model_out=None, iou_threshold=0.
         if r > target_recall:
             precision_at_target_recall = p
 
+    print(average_precision)
     pr_table = wandb.Table(data=metrics, columns = ["precision", "recall"])
     log_dict = {
         f"AP@{iou_threshold}": average_precision,
@@ -172,5 +174,5 @@ def evaluate(loader, device, epoch, model=None, model_out=None, iou_threshold=0.
         f"epoch": epoch
     }
 
-    wandb.log(log_dict)
+    # wandb.log(log_dict)
     return log_dict
