@@ -174,5 +174,5 @@ def evaluate(loader, device, epoch, model=None, model_out=None, iou_threshold=0.
         f"epoch": epoch
     }
 
-    # wandb.log(log_dict)
+    wandb.log(log_dict)
     return log_dict

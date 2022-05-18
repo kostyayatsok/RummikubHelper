@@ -4,16 +4,18 @@ import fiftyone.utils.coco as fouc
 # The directory containing the source images
 # data_path = "images/rummy-6/val"
 # data_path = "images/generated/coco/val"
-data_path = "images/coco-test-640"
+data_path = "images/coco-test-1280"
+# data_path = "images/coco-test-640"
 # data_path = "images/generated/ultimate/train"
 # data_path = "images/generated/stacked/train"
-# data_path = "images/generated/coco/train/"
+# data_path = "images/generated/smooth/train/"
 
 # The path to the COCO labels JSON file
 # labels_path = f"{data_path}/_colors.coco.json"
-# labels_path = f"{data_path}/_annotations.coco.json"
-labels_path = f"{data_path}/_values.coco.json"
+labels_path = f"{data_path}/_annotations.coco.json"
+# labels_path = f"{data_path}/_values.coco.json"
 # labels_path = f"{data_path}/_values+colors.coco.json"
+# labels_path = f"{data_path}/_one_class.coco.json"
 
 # Import the dataset
 dataset = fo.Dataset.from_dir(
@@ -24,7 +26,7 @@ dataset = fo.Dataset.from_dir(
     # label_field="ground_truth",
 )
 
-if True:
+if False:
     pred_label = "predictions"
     # classes=["red", "blue", "black", "orange"]
     classes=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13']

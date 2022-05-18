@@ -18,7 +18,7 @@ const int S = 3;  // # min len
 // n×k×f(M) multi-dimensional array which contains the maximum
 // score that can be obtained given this state of the puzzle
 vector<vector<int>> scores;
-vector<int> scoresMemory;
+vector<vector<int>> scoresMemory;
 
 vector<vector<int>> hand(N, vector<int>(K));
 vector<vector<int>> board(N, vector<int>(K));;
@@ -92,9 +92,37 @@ void init()
         maxTotalHash *= maxHash;
     }
     scores.resize(N, vector<int>(maxTotalHash, -INF));
-    scoresMemory.resize(N, -1);
+    scoresMemory.resize(N, vector<int>(maxTotalHash, -INF));
 }
 
+int makeGroups(vector<int> &groups)
+{
+    int rest = 0;
+    int j;
+    for (j = 0; j < M; j++)
+    {
+        int groupSize = 0;
+        vector<int> usedGroups(K);
+        for (int i = 0; i < K; i++)
+        {
+            if (groups[i] - usedGroups[i] > 0)
+            {
+                groupSize++;
+                usedGroups[i]++;
+            }
+        }
+        if (groupSize + rest < S)
+        {
+            break;
+        }
+        rest += groupSize - S;
+        for (int i = 0; i < K; i++)
+        {
+            groups[i] -= usedGroups[i];
+        }
+    }
+    return j;
+}
 
 vector<pair<vector<int>, int>> makeRuns(vector<int> runsHashes, int value)
 {
@@ -176,29 +204,8 @@ vector<pair<vector<int>, int>> makeRuns(vector<int> runsHashes, int value)
             groups[i] = combination[i][1];
         }
 
-        int rest = 0;
-        for (int j = 0; j < M; j++)
-        {
-            int groupSize = 0;
-            vector<int> usedGroups(K);
-            for (int i = 0; i < K; i++)
-            {
-                if (groups[i] - usedGroups[i] > 0)
-                {
-                    groupSize++;
-                    usedGroups[i]++;
-                }
-            }
-            if (groupSize + rest < S)
-            {
-                break;
-            }
-            rest += groupSize - S;
-            for (int i = 0; i < K; i++)
-            {
-                groups[i] -= usedGroups[i];
-            }
-        }
+        makeGroups(groups);
+
         bool useAllBoard = true;
         int score = 0;
         for (int i = 0; i < K; i++)
@@ -209,7 +216,7 @@ vector<pair<vector<int>, int>> makeRuns(vector<int> runsHashes, int value)
                 useAllBoard = false;
                 break;
             }
-            score += usedCnt * (value + 1);
+            score += usedCnt;// * (value + 1);
         }
         if (useAllBoard)
         {
@@ -265,12 +272,80 @@ int maxScore(int value, vector<int> &runsHashes)
             if (scores[value][totalRunsHash] < curScore+nextScore)
             {
                 scores[value][totalRunsHash] = curScore+nextScore;
-                scoresMemory[value] = combineHashes(newRunsHashes[i].first);
+                scoresMemory[value][totalRunsHash] = combineHashes(newRunsHashes[i].first);
             }
         }
-
     }
     return scores[value][totalRunsHash];
+}
+
+vector<vector<pair<int, int>>> restore()
+{
+    vector<vector<pair<int, int>>> rows;
+
+    vector<vector<int>> runs(K, vector<int>(M));
+    // vector<int> groups[M];
+    int totalRunsHash = 0;
+    for (int value = 0; value < N; value++)
+    {
+        vector<int> groups(K);
+        totalRunsHash = scoresMemory[value][totalRunsHash];
+        vector<int> runsHashes = splitHashes(totalRunsHash);
+        for (int i = 0; i < K; i++)
+        {
+            vector<int> run = unhashRun(runsHashes[i]);
+            
+            int cnt = 0;
+            for (int r : run)
+            {
+                if (r > 0)
+                {
+                    cnt++;
+                }
+            }
+            sort(runs[i].begin(), runs[i].end(), [](int a, int b){return (a < b) && (a > 0);});
+            for (int j = 0; j < cnt; j++)
+            {
+                runs[i][j]++;
+                if (value == N-1)
+                {
+                    int len_run = runs[i][j];
+                    rows.push_back(vector<pair<int, int>>(len_run));
+                    for (int k = 0; k < len_run; k++)
+                    {
+                        rows[rows.size() - 1][k] = {value - len_run + 1 + k, i};
+                    }
+                    runs[i][j] = 0;
+                }
+            }
+            for (int j = cnt; j < M && runs[i][j] > 0; j++)
+            {
+                int len_run = runs[i][j];
+                rows.push_back(vector<pair<int, int>>(len_run));
+                for (int k = 0; k < len_run; k++)
+                {
+                    rows[rows.size() - 1][k] = {value - len_run + k, i};
+                }
+                runs[i][j] = 0;
+            }
+
+            groups[i] = hand[value][i] + board[value][i] - cnt; 
+        }
+        vector<int> groups_copy = groups;
+        int n_groups = makeGroups(groups_copy);
+        for (int i = 0; i < n_groups; i++)
+            rows.push_back({});
+        for (int i = 0; i < K; i++)
+        {
+            sort(rows.end()-n_groups, rows.end(), [](vector<pair<int, int>> &a, vector<pair<int, int>> &b){return (a.size() > b.size()) || (a.size() > 0);});
+            for (int j = 0; j < groups[i] && j < n_groups; j++)
+            {
+                rows[rows.size() - 1 - j].push_back({ value, i });
+            }
+        }
+    }
+
+    return rows;
 }
 
 int main()
@@ -281,25 +356,36 @@ int main()
     // {
     //     board[i][0] = 1;
     // }
-    board[12][0] = 1;
-    board[11][0] = 1;
-    board[10][0] = 1;
+    // board[12][0] = 1;
+    // board[11][0] = 1;
+    // board[10][0] = 1;
     // hand[1][2] = 1;
     // hand[1][3] = 1;
+    // hand[1][0] = 2;
+    // hand[2][0] = 1;
+    // hand[3][0] = 1;
+    // hand[8][0] = 1;
+    hand[9][0] = 1;
+    hand[9][1] = 2;
+    hand[9][2] = 1;
+    hand[9][3] = 1;
+    // hand[10][0] = 1;
 
     vector<int> runsHashes(K);
     int score = maxScore(0, runsHashes);
     cout << score << "\n";
     if (score > -INF)
     {
-        for (int runsHash : scoresMemory)
+        cout << "Restore start\n";
+        vector<vector<pair<int, int>>> rows = restore();
+        cout << "n rows: " << rows.size() << "\n";
+        for (auto &row : rows)
         {
-            vector<int> runsHashes = splitHashes(runsHash);
-            for (int i = 0; i < K; i++)
+            for (auto tile : row)
             {
-                vector<int> run = unhashRun(runsHashes[i]);
-                // TODO:
+                cout << tile.first << "-" << tile.second << " ";
             }
+            cout << "\n";
         }
     }
 

@@ -1,4 +1,4 @@
-%%writefile {exp_name}_config.py
+# %%writefile {exp_name}_config.py
 
 annotation_filename = "values+colors"
 run_name = f"{annotation_filename}_yolox_s"

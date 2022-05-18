@@ -1,20 +1,17 @@
 # %%writefile {exp_name}_config.py
 
-run_name = "values_yolox_tiny"
+run_name = "tiles_yolox_tiny"
 root_data_dir = "rummy-data"
-annotation_filename = "values"
-classes = ('rummikub-tiles-dataset', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', )
+annotation_filename = "one_class"
+classes = ('rummikub-tiles-dataset', 'tile',)
 num_classes = len(classes)
 
-# The new config inherits a base config to highlight the necessary modification
 _base_ = 'configs/yolox/yolox_tiny_8x8_300e_coco.py'
-# We also need to change the num_classes in head to match the dataset's annotation
 model = dict(
     bbox_head=dict(num_classes=num_classes),
 )
-# Modify dataset related settings
-dataset_type = 'CocoDataset'
 
+dataset_type = 'CocoDataset'
 train_dataset = dict(
     dataset=dict(
         ann_file=f'{root_data_dir}/train/_{annotation_filename}.coco.json',

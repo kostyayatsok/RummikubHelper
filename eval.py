@@ -16,9 +16,9 @@ torch.manual_seed(42)
 
 dataset_test = CocoFormatDataset(
     # annotation_path="images/coco-test-640/_annotations.coco.json",
-    # annotation_path="images/coco-test-640/_one_class.coco.json",
+    annotation_path="images/coco-test-640/_one_class.coco.json",
     # annotation_path="images/coco-test-640/_colors.coco.json",
-    annotation_path="images/coco-test-640/_values.coco.json",
+    # annotation_path="images/coco-test-1280/_values.coco.json",
     images_dir="images/coco-test-640/",
     img_sz=640,
     relabel=False
@@ -44,7 +44,7 @@ if False:
     wandb.init(project="RummyTest", name="FasterRCNN-v&c-mix-960")
     evaluate(model=model, loader=data_loader_test, device=device, epoch=-1)
 else:
-    name = 'values_yolov5l'
+    name = 'tiles_yolox_tiny'
     model_out = pd.read_json(f"predictions/{name}_predictions.bbox.json")
     wandb.init(project="RummyTest", name=name)
     evaluate(model_out=model_out, loader=data_loader_test, device=device, epoch=-1)

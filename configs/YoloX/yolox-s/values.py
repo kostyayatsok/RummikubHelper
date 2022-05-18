@@ -1,4 +1,4 @@
-%%writefile {exp_name}_config.py
+# %%writefile {exp_name}_config.py
 
 run_name = "values_yolox_s"
 root_data_dir = "rummy-data"

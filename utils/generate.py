@@ -8,11 +8,11 @@ sys.path.append('.')
 from data_utils.synthetic_dataset import SyntheticConfig, SyntheticDataset
 from math import floor
 
-VERSION = "stacked-1280"
+VERSION = "smooth"
 PATH = f"images/generated/{VERSION}"
 PART = "train"
 # PART = "val"
-IMG_SIZE = 1280
+IMG_SIZE = 416
 FORMAT = "COCO"
 
 if PART == 'val':
@@ -58,7 +58,6 @@ if __name__ == "__main__":
     ]
     classes_coco = [a["name"] for a in categories_coco]
     
-    # Create dirictories
     os.makedirs(f"{PATH}/{PART}", exist_ok=True)
     
     for sample_id in tqdm(range(N_SAMPLES)):

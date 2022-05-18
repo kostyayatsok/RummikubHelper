@@ -25,12 +25,21 @@ class SyntheticConfig:
     scale: Tuple=(0.06, 0.33)
     image_size: int=640
     tile_transforms = nn.Sequential(
-        T.RandomRotation(degrees=360, expand=True),
-        # T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.05, hue=0.01),
+        # T.RandomRotation(degrees=360, expand=True),
+        # T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.05),
+        # T.GaussianBlur(kernel_size=5, sigma=(0.8, 1.5)),
+        # T.RandomErasing(p=0.25, scale=(0.02, 0.1), value=1),
+        # T.RandomErasing(p=0.25, scale=(0.02, 0.1), value=1),
+        # T.RandomErasing(p=0.25, scale=(0.02, 0.1), value=1),
+        T.RandomPerspective(0.8)
+    )
+    row_transforms = nn.Sequential(
+        T.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
+        T.GaussianBlur(kernel_size=5, sigma=(0.9, 1.5)),
     )
     total_transforms = nn.Sequential(
         T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.05, hue=0.01),
-        T.GaussianBlur(kernel_size=7, sigma=(0.1, 1.5)),
+        T.GaussianBlur(kernel_size=7, sigma=(0.1, 1)),
     )
 
 class SyntheticDataset(Dataset):
@@ -69,8 +78,9 @@ class SyntheticDataset(Dataset):
             labels.append(self.to_id[value+'-'+color])
             
             tile = read_image(tile_path) / 255.
-            tile = tile[:,:,int(tile.size(-1)*0.05):-int(tile.size(-1)*0.05)]
-            tile = tile[:,int(tile.size(-2)*0.05):-int(tile.size(-2)*0.05),:]
+            tile = self.config.tile_transforms(tile)
+            tile = tile[:,:,int(tile.size(-1)*0.1):-int(tile.size(-1)*0.1)]
+            tile = tile[:,int(tile.size(-2)*0.1):-int(tile.size(-2)*0.1),:]
             tile = resize_fn(tile)
 
             if i > 0 and tile.size(1) != tiles[-1].size(1):
@@ -90,7 +100,7 @@ class SyntheticDataset(Dataset):
         origin = (row.size(-1)//2, row.size(-2)//2)
         # origin = (0, 0)
         old_shape = row.shape
-        rotated_row = T.functional.rotate(row, angle,expand=True)
+        rotated_row = T.functional.rotate(row, angle,expand=True, interpolation=T.InterpolationMode.BILINEAR)
         new_shape = rotated_row.shape
 
         rotated_bboxes = []
@@ -135,7 +145,7 @@ class SyntheticDataset(Dataset):
         x0 = 10
         y0 = int(y0)
         background_size = min(background.size(1), background.size(2))
-        resize_fn = T.Resize(tile_size, max_size=tile_size+1)
+        resize_fn = T.Resize(tile_size, max_size=tile_size+1, antialias=True)
 
         row, labels, bboxes = self.stack_tiles(background_size//tile_size, resize_fn)
         # print(bboxes)
@@ -149,9 +159,10 @@ class SyntheticDataset(Dataset):
         h = min(row.shape[-2], background_size)
 
         row = row[:,:h,:w]
-        mask = (row.sum(0) > 0.)
+        mask = (row.sum(0) > 0.2)
         if y0+h > background_size:
             return background, [], []
+        row = self.config.row_transforms(row)
         background[:, y0:y0+h, x0:x0+w][:, mask] = row[:, mask]
         for bbox in bboxes:
             bbox[0] += x0
@@ -196,7 +207,7 @@ class SyntheticDataset(Dataset):
 
 
         final_image = self.config.total_transforms(background)
-        final_image = T.Resize(self.config.image_size)(final_image)
+        final_image = T.Resize(self.config.image_size, antialias=True)(final_image)
         return final_image, annotation
 
 
